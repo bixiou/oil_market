@@ -1,0 +1,15 @@
+*/Rystad/*
+Adrien's/
+*desktop.ini
+.Rproj.user
+*~$*
+*.tmp
+*.RDataTmp
+*.RDataTmp1
+*.RData
+*.RData.bak
+*.Rhistory
+*.RprofileUnused
+*.Rproj.user/
+*.rproj
+*/build/*
