@@ -12,3 +12,12 @@ View(reserves)
 View(asset)
 View(companies)
 View(history)
+
+# Pourquoi certaines asset ont des dates d'award/discovery dans le futur ?
+# > Ce que Rystad prédit, Léo les utilise pas, ça semble tiré du chapeau.
+# Pourquoi asset_time_independent donne seulement des catégories de réserves plutôt que des chiffres ? Est-ce qu'on peut reconstituer les chiffres à partir de (la date la plus récente de) reserves_year ?
+# > Oui.
+# Quel logiciel tu utilises ?
+# > R
+# As-tu déjà un code qui calcule les réserves par pays ?
+# > Prendre reserve, merge avec time_independent, summarize sum et tu l'as
