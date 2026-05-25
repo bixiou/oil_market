@@ -1,0 +1,7 @@
+# TODO
+
+- [] Lire le projet de recherche (papers/project.docx), [Okullo & Reynès (2016)](https://www.sciencedirect.com/science/article/pii/S0140988316302912), [Benchekroun et al. (2023)](https://www.sciencedirect.com/science/article/pii/S0095069623000712), [de Cannière (2024)](https://drive.google.com/file/d/1fUcyAJij-UZWJKVtANOwPNJ1T6PYrnP-/view), Léo's thesis Chapter 2, 
+- [] Pour se familiariser avec les données, calculer les réserves par pays.
+- [] Migrer le modèle de Léo sur Python.
+- [] Écrire une première version du modèle avec un cartel, une coalition (dont la demande est exogène et qui peut chevaucher le cartel), mais pas de partenaire de la coalition (les autres producteurs de pétrole sont oligopolistiques). Réfléchir comment intégrer les apports de Benchekroun 2023, Okullo 2016 et Léo. L'idée c'est, comme dans Benchekroun, d'avoir un modèle d'équilibre partiel où des producteurs oligololistiques ont des coûts d'extraction sépcifiques au pays (voire au champ) qui dépendent des réserves, avec une option alternative (renewable backstop). Il faut ajouter à ça des contraintes de capacité, et des coûts réalistes (cf. le travail de Léo). Il faut réfléchir au type de résolution (open-loop vs. closed-loop).
+- [] Réfléchir si le modèle doit être raffiné pour inclure charbon et gaz; et/ou des types de pétrole hétérogènes. 
