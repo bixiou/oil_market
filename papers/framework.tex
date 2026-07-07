@@ -1,0 +1,457 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage[margin=2.4cm]{geometry}
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
+
+\usepackage{graphicx} 
+
+\usepackage{booktabs}
+
+\usepackage{xurl}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\renewcommand{\thesubsection}{\arabic{section}.\Alph{subsection}}
+
+\title{\vspace{-1.2cm}Cadre du modèle et chemin de résolution}
+\author{Romain R.}
+\date{Juin 2026}
+
+\begin{document}
+\maketitle
+\vspace{-0.6cm}
+
+\textit{ce rapport fixe un premier cadre et les notations/grandeurs, justifie les premiers choix de
+résolution/de validation, et justifie le choix des pistes ML pour le closed-loop Stackelberg quand la dimension deviendra un vrai problème. Enfin, il présente les analyses de données actualisées de l'article de Coulomb et al. Le but est d'exposer les idées et de garder le fil. }
+
+\section{Projet}
+
+Idée du projet: greffer une \textbf{politique climatique côté offre} sur un \textbf{jeu d'extraction oligopole-frange} (quelques gros exportateurs stratégiques, potentiellement cartellisés, face à une frange concurrentielle price-taker). Les données: champs hétérogènes de Rystad.
+
+\textbf{Le mécanisme de la coalition.} Une coalition climat (les importateurs qui tarifient le carbone) signe des contrats d'achat de long terme avec certains exportateurs, qui deviennent alors des partenaires de la coalition : ils acceptent un prix (contractuel) plus bas que le prix de cartel, mais ils gagnent en écoulant la totalité de leur réserve. Le pétrole acheté est consommé (dans la limite du budget carbone de la coalition). Il en résulte une \textbf{dé-cartellisation} : chaque partenaire détaché affaiblit le cartel/l'oligopole, l'offre devient plus concurrentielle, le prix baisse. Pourquoi faire : sous un cartel, celui-ci capte la rente de tarification carbone de la coalition ; les contrats permettent de la récupérer et de sécuriser l'approvisionnement. Le résultat visé : la menace crédible de ces contrats peut suffire à empêcher la cartellisation.
+
+
+L'objet final est un \textbf{graphe orienté acyclique (DAG)} où chaque
+\emph{n\oe ud} dicte qui est dans quel bloc (cartel / partenaires sous contrat / frange). Sur un noeud, on résout
+l'équilibre d'extraction, on lit les payoffs, et on \emph{élague} les n\oe uds où un membre a une
+déviation profitable. \textbf{La résolution d'un n\oe ud est le c\oe ur du problème} ; le DAG est la structure externe. 
+
+\section{Notations}
+
+\begin{itemize}\itemsep1pt
+\item $S^i_t$ : réserves du bloc $i\in\{c,f,k\}$ (cartel, frange, coalition) en début de période $t$.
+\item $x^i_t$ : extraction. $Q_t=x^c_t+x^f_t$ ; prix par demande inverse $p_t=P(Q_t)$ (linéaire $\alpha-\beta Q_t$).
+\item $c_i$ : co\^ut marginal d'extraction (\$/bbl). \textbf{Hypothèse : co\^uts marginaux constants \emph{par champ}} (comme De Cannière / Okullo \& Reynès) : l'hétérogénéité est captée entre gisements (chaque champ a son $c_i$), pas dans chaque champ. L'offre est disciplinée  alors par la rente de rareté de Hotelling et l'ordre d'extraction de Harstad entre les champs. (Benchekroun et al.\ retiennent au contraire des co\^uts convexes et \emph{stock-dépendants} : extension possible.) Coût agrégé par bloc dans un premier temps ; l'hétérogénéité individuelle devient nécessaire quand la coalition offre des contrats.
+
+\item $\delta=1/(1+r)$ : actualisation. $r$ commun aux extracteurs (pour la comparabilité avec la
+littérature) ; pour la coalition, un $r_{\text{SCC}}$ potentiellement plus bas. 
+\item intensité carbone, SCC, coût carbone par baril, budget carbone de la coalition. 
+%\item $I_{CO2}^i$ : intensité carbone (kgCO$_2$e/bbl). Co\^ut carbone par baril 
+%$= \text{SCC}\cdot\theta/1000$ (\$/bbl), avec SCC en \$/tCO$_2$e.
+\item Pour les contrats de la coalition. $T_j$ : transfert (valeur actualisée du contrat d'achat) au partenaire $j$ ; $\gamma$ : pouvoir de négociation ; $A_j$ : valeur du détachement de $j$ pour la coalition ; $R_j$ : \emph{prix de réserve} de $j$ (son payoff s'il reste dans le cartel).
+
+\item notons qu'on ne détaille pas (encore?) les décisions d'investissement/développement, le développement maximal, les discoveries, les contraintes de temps (LAD, dépréciation, déclin), la demande est posée en hypothèse. Voir $Modele\_V2.pdf$ de Léo, qui concerne un équilibre concurrentiel (abordé par le planificateur), c'est un cas limite de notre modèle de DAG, on pourrait vérifier que les deux coincident.   
+\end{itemize}
+
+
+\section{Cadre du jeu et programmes des agents}
+
+\textbf{Définitions} 
+
+
+\begin{itemize}
+    \item \textit{\textbf{Open-loop}}: décider d'un plan d'extraction en $t=0$. On "signe" un contrat $(x_0, x_1, …, x_T)$, et on agit à chaque instant en extrayant le $x_t$ prévu. On se rend facilement compte que ce cadre est non crédible. Exemple minimal: 
+
+     Soit un leader Stackelberg sur 2 périodes. À $t=0$, il annonce : "je vais très peu extraire à $t=0$ ET à $t=1$ " (donc prix élevé aux deux périodes). Pourquoi cette promesse:  pour que la frange, qui anticipe un prix élevé futur, garde son pétrole pour plus tard au lieu d'inonder le marché à t=0. La promesse de restreindre à t=1 sert à manipuler le comportement de la frange à t=0. Maintenant, lorsque on est à $t=1$, la frange a déjà joué en t=0 (elle a gardé son pétrole, comme prévu). La promesse du leader  "je restreins à t=1" n'a plus aucune utilité : il n'y a plus personne à influencer, le passé est passé. Son intérêt immédiat est d'extraire beaucoup (à $t=1$) car le prix est haut, autant en profiter. $=>$ il veut dévier de sa propre stratégie. Et comme la frange n'est pas naïve, elle ne croit pas la promesse dès le départ: le plan open-loop est détruit. C'est de l'incohérence temporelle : un engagement optimal à $t=0$ qu'on veut violer à $t=1$. 
+     
+    \item \textbf{\textit{Closed-loop}}: on \textit{rejoue}\footnote{Rejouer $=$ réoptimiser sa stratégie ; à ne pas confondre avec agir $=$ extraire. On agit à chaque instant dans les deux cadres, mais on ne rejoue qu'en closed-loop : en open-loop le plan est figé en $t=0$.} à chaque instant en fonction de l'état présent $x_t=x_t(S_t)$, en regardant les stocks actualisés de l'état précédent ($S_t=S_{t-1}-x_{t-1}$). Ainsi, lorsque on fait de la backward induction (pour résoudre les équations de Bellman), c'est forcément du closed-loop. 
+    Avec T=1 période uniquement, closed-loop = open-loop bien sûr.
+    \item \textbf{\textit{Markov Perfect}}: c'est le concept d'équilibre parfait en sous jeux, avec la propriété sans mémoire: conditionnellement au présent (l'état $S_t$) la stratégie ne dépend pas explicitement du passé $(S_0,S_1,...S_t-1)$.
+\end{itemize}
+
+
+\textbf{Hiérarchie des modèles}
+
+\begin{itemize}
+    \item \emph{Open-loop \textbf{Stackelberg / Nash Cournot}} : \textbf{rejetés}. Les joueurs s'engagent à $t=0$ sur des chemins de production dont ils voudront dévier \emph{ex post} $\Rightarrow$ non crédible. Ne sont pas défendables. 
+    \item \emph{\textbf{Closed-loop Nash-Cournot}} : Décisions simultanées à chaque période ;  chacun prend la production de l'autre à son niveau d'équilibre (pas de terme de réaction $dx^f/dx^c$). \textbf{baseline crédible (équilibre de Nash à chaque étape par backward induction, -> équilibre de Nash parfait en sous jeux)}. Remarque : Un seul joueur A stratégique (e.g, cartel parfait) + frange price-taker : open-loop Nash = closed-loop Nash = Markov perfect. La frange n'est pas un rival stratégique qu'il faut surveiller, elle se résume au prix. Le joueur A n'a personne à manipuler. Cette co\"incidence open-loop/closed-loop est perdue dès que $N>1$ joueurs stratégiques.
+    \item \emph{\textbf{Closed-loop Stackelberg (Feedback Markov Perfect)}} : Le leader intègre la fonction de réaction state-dependent du follower ($dx^f/dx^c\neq0$). C'est le seul cadre qui permet, par exemple, le fait suivant:  
+    
+    Anticipation d'une \textbf{\textit{fuite}} par le leader: s'il restreint trop, les gisements marginaux de la frange deviennent rentables et compensent ; la  stratégie du leader est affaiblie (fuite). 
+    
+    Semble plus réaliste et confirmé empiriquement? Problème majeur dans le cas des oligopoles: qui est leader ? On n'a plus qu'une simple dérivée $dx^f/dx^c$ on a toutes les dérivées $dx^f/dx^j$ pour $j \in$ \{oligopoles\} et on a même, au sein des oligopoles, des termes d'anticipation $dx^j/dx^i$. Je ne pense pas que la question "qui anticipe qui" n'admette de réponse propre, ni même qu'il existe de hiérarchie. Raison de plus pour étudier Nash Cournot en premier. On peut aussi se demander, en dynamique $T>1$ périodes, si le fait d'avoir du Nash Cournot répété "affaibli" l'idée du Stackelberg. Mais je pense que ce sont deux choses orthogonales : il y a la séquentialité intra période (le leader joue avant le follower) et la séquentialité "interpériodes" (le leader, en $t+1$, a pleine connaissance de la stratégie de la frange en $t$). C'est orthogonal parce que au moment statique de la décision d'extraction, seul Stackelberg permet de répondre au problème de la "fuite" mentionné précédemment, et cette fuite modifie forcément la décision. Mais il demeure le problème de la hiérarchie des leaders. Pour simplifier, on pourrait considérer que les oligpolistes jouent en Nash Cournot entre eux (donc tous les termes $dx^j/dx^i$ sont nuls) mais qu'ils sont tous leaders face à la frange (ils anticipent $dx^f/dx^j$ et la frange suit, mais les oligopolistes ne s'anticipent pas entre eux). C'est un mix possible Nash Cournot - Stackelberg
+
+
+\end{itemize}
+
+\textbf{Oligopole comme cas général, et cartel comme cas particulier: discussion sur le coefficient de coopération $\varphi$ \& $\theta$}
+
+Le cadre de base est un \textbf{oligopole-frange} : $N$ gros joueurs stratégiques individuels, plus la frange. Le \emph{cartel} est le cas où les gros joueurs \emph{coopèrent} pleinement. Le DAG impose le point de vue oligopolistique : on ne peut ni former/casser des coalitions ni détacher un partenaire d'un bloc agrégé (le cartel) ; il faut des joueurs individuels, et le cartel émergera ou non du pruning du DAG. 
+
+On adopte le modèle du \textbf{coefficient de coopération} (Cyert \& DeGroot 1973 ; idée utilisée par Okullo \& Reynès 2016) : le joueur $i$ maximise son profit \emph{plus une fraction $\varphi$ de celui des autres gros joueurs},
+\[
+U_i = (p-c_i)\,x^i \;+\; \varphi \sum_{j\neq i} (p-c_j)\,x^j, \qquad \varphi\in[0,1].
+\]
+La FOC en dérive directement (elle n'est pas posée) :
+\[
+(p-c_i) \;=\; \beta\Big( x^i + \varphi \sum_{j\neq i} x^j \Big).
+\]
+Produire un baril de plus fait baisser le prix de $\beta$ ; le joueur internalise cette perte sur sa propre production, et à hauteur de $\varphi$ sur celle de ses partenaires. $\varphi=0$ donne le Cournot non coopératif, $\varphi=1$ le cartel parfait. On peut voir $\varphi$ de deux manières, qui donnent le même équilibre \textbf{sous cartel homogène} (comme dans De Cannière) : 
+
+\textbf{Soit c'est un poids de préférence} : le joueur valorise le profit de ses partenaires et maximise l'objectif pondéré $U_i = \pi_i + \varphi \sum_{j \neq i} \pi_j$. Puisque le prix dépend des quantités, la dérivée des profits croisés par rapport à $q_i$ donne $-\beta q_j$. La condition du premier ordre vient, comme plus haut : 
+$$ \frac{\partial U_i}{\partial q_i} = (p - c_i) - \beta \left(q_i + \varphi \sum_{j \neq i} q_j \right) = 0 $$
+
+\textbf{Soit c'est une croyance} : le joueur maximise strictement son seul profit $\pi_i = (p - c_i)q_i$, mais pense que ses rivaux accompagnent ses mouvements. Il pose la croyance $\lambda = \frac{dQ_{-i}}{dq_i}$, alors l'offre totale varie de $1+\lambda$. L'impact prix total est alors $-\beta(1+\lambda)$ (règle de la chaîne et utiliser demande inverse) et la FOC devient :
+$$ \frac{\partial \pi_i}{\partial q_i} = (p - c_i) - \beta q_i(1+\lambda) = 0 $$
+
+L'équivalence (prouvée par Escrihuela-Villar, 2015) repose sur l'identification de ces deux FOC. Sous symétrie ($q_i = q_j$, ce que l'hypothèse de \textbf{cartel homogène} implique), le terme $(q_i + \varphi \sum_{j \neq i} q_j)$ de la première approche s'écrit $q_i(1 + \varphi(N-1))$. Par identification, on obtient $\lambda = \varphi(N-1)$. Les deux programmes sont alors indiscernables : le coefficient de coopération $\varphi$ (niveau préférences) n'est que la variation $\lambda$ normalisée (niveau croyances). On peut choisir l'angle le plus parlant sans rien changer au modèle.
+
+Si les $N$ membres sont identiques (hypothèse de cartel homogène là encore, plus fort que la symétrie) , chacun produit $x^i=Q^c/N$ à l'équilibre. En sommant leur FOC on obtient :
+$$ (p-c) = \theta\,\beta\,Q^c, \qquad \theta = \frac{1+\varphi(N-1)}{N} $$
+
+C'est exactement la condition de conduite de De Cannière : $\varphi=0$ donne $\theta=1/N$ (Cournot à $N$ joueurs), $\varphi=1$ donne $\theta=1$ (cartel pur). Le $\theta$ n'apparaît plus ad-hoc, il est l'agrégation au niveau du bloc de la coopération $\varphi$ posée au niveau des membres. (mais si membres identiques, phi=1/N ? )
+
+Cette équivalence  requiert la symétrie. A suivre: sous l'hétérogénéité des gisements (base Rystad), l'isomorphisme peut survivre si on considère une variation idiosyncratique $\lambda_i = \varphi \frac{Q_{-i}}{q_i}$? Du moins, on a montré que l'intégration de $\theta$ par De Cannière peut être justifiée par \textbf{micro-fondation} de $\phi$ comme dans Okullo \& Reynès, et on garde comme cas général le coefficient de coopération $\phi$ pour le jeu de l'oligopole. L'endogénéisation du coefficient, c'est plus tard via le DAG, qui donnera la composition du cartel/de l'oligopole
+
+
+\textbf{Malédiction de la dimension}  
+
+Naivement, le closed-loop souffre de la malédiction de la dimension : discrétiser
+les réserves de $\sim$10 agents en 10 points $=$ \textbf{$10^{10}$ états}, intenable.
+Si la frange est modélisée comme un agent représentatif (agrégé) \emph{price-taker}, l'espace d'état s'effondre à une dimension faible $(S^c, S^f, t)$. Le problème \emph{closed-loop} est alors soluble exactement, avec de la programmation dynamique.
+Le vrai goulot vient du DAG : il exige de suivre \emph{individuellement} les $N$ stocks des joueurs stratégiques (pour former/casser les coalitions et cibler les contrats), et l'état $(S^1,\dots,S^N, S^f, t)$ grandit avec $N$. L'hétérogénéité \emph{intra-frange}, elle, ne co\^ute rien dans le solve : price-taker, elle se traite par sommation à prix donné, et ne se désagrège qu'à la boucle externe (pruning, bilan welfare), gratuitement au prix d'équilibre connu. Les réseaux de neurones (partie 6) s'imposent quand $N$ rend la grille intenable.
+
+\textbf{Résolution par induction arrière} pour Nash Cournot et closed-loop Stackelberg car l'horizon temporel est fini et cela assure un équilibre crédible à chaque étape (Nash parfait en sous-jeux). C'est possible aussi car le jeu est \textbf{markovien (et l'équilibre Markov Perfect)} (seul l'état courant importe dans le programme des agents, et pas l'historique)
+
+\textbf{Équations de Bellman.} Pour la frange (price-taker) :
+$$V^f(S^f_t,t)=\max_{0\le x^f\le S^f_t}\ (p_t-c^f)\,x^f\;+\;\delta\,V^f\!\big(S^f_t-x^f,\,t+1\big),$$
+dont la forme déroulée est :
+$$V^f(S^f_0,0)=\max_{x^f_0,\dots,x^f_{T-1}}\ \sum_{t=0}^{T-1}\delta^t\,(p_t-c^f)\,x^f_t\quad\text{(sous contraintes de stock).}$$
+
+L'état est $(S^f,t)$, l'action $x^f$, la récompense immédiate (ou profit courant)
+$(p_t-c^f)x^f$, le facteur d'actualisation $\delta$, et $V^f$ est la value function. La
+FOC est la règle de Hotelling : $p_t-c^f = \delta\,\partial V^f/\partial S^f$
+(d'où émerge la rente de rareté, profit net = coût intertemporel du stock).
+
+Pour le cartel (leader), la valeur dépend aussi du stock de la frange (c'est la dépendance « \textbf{feedback} ») :$$V^c(S^c_t,S^f_t,t)=\max_{0\le x^c\le S^c_t}\ \left[ \Pi^c(x^c, x^{f*}) + \delta V^c(S^c_t-x^c, S^f_t-x^{f*}, t+1) \right]$$où le profit courant est $\Pi^c = (P(x^c+x^{f*})-c^c)x^c$ et $x^{f*}(x^c)$ est la meilleure réponse de la frange.  
+Le \textbf{programme du cartel est imbriqué} :
+pour évaluer son payoff pour un $x^c$ candidat, il doit d'abord anticiper la réponse de la frange. Sa
+FOC, par differentiation de l'équation de Bellman (règle de la chaîne): $$P + \underbrace{\theta \frac{\partial P}{\partial x^c} x^c}_{\text{Pouvoir de marché}} - c^c + \underbrace{\left( \frac{\partial P}{\partial x^f} x^c \right) \frac{dx^{f*}}{dx^c}}_{\text{Anticipation (extraction)}} = \delta \frac{\partial V^c}{\partial S^c} + \underbrace{\delta \frac{\partial V^c}{\partial S^f}\frac{dx^{f*}}{dx^c}}_{\text{Anticipation (stock)}}$$
+où $\theta \in [0,1]$ pondère le pouvoir de marché ; il n'est pas collé ici \emph{ad hoc} : il dérive de l'objectif coopératif présenté plus haut ($\theta=(1+\varphi(N-1))/N$)
+
+
+
+\textbf{Le terme de réaction $dx^{f\ast}/dx^c$ est absent en Nash-Cournot} (chacun prend l'action de l'autre comme fixe). Le cartel internalise le programme de la frange en \emph{Stackelberg} : en \emph{reinforcement learning} (section \ref{sec:B}), on intègrerait la politique convergée de la frange dans le programme du cartel ; avec des \emph{Deep Nets} (section \ref{sec:A}), on internalise son gradient, la dérivée $dx^{f\ast}/dx^c$ s'obtenant lors de l'évaluation de la loss function. Ce n'est pas de la triche, c'est de l'anticipation : le timing du jeu demeure respecté.
+
+
+
+\section{Ajouter la coalition : contrats d'achat et dé-cartellisation (idées)}
+
+Mon \textit{a priori} : « intégrer une coalition change tous les programmes, il y a trop d'interactions ».
+Mais il s'avère que c'est plus simple que je ne l'imaginais
+
+\textbf{(1) La structure des programmes ne change pas.} Chaque extracteur maximise toujours son profit
+actualisé sous ses réserves. Intégrer la coalition $=$ ajouter \emph{quatre} choses, pas tout revoir :
+\begin{enumerate}\itemsep1pt
+\item un nouveau joueur (la coalition) dont l'action est de \emph{choisir quels pays détacher} par contrat, et les transferts $T_j$ ;
+\item une modification du jeu : le partenaire $j$ sort du cartel et vend sa réserve sous contrat $\Rightarrow$ le cartel restant est plus petit, l'offre plus concurrentielle, le prix \emph{baisse} (dé-cartellisation, effet prix opposé au gel comme dans Harstad, proposé précédement) ;
+\item un sous-problème de marchandage de Nash pour le transfert $T_j$ (\textbf{cf (2) });
+\item une re-résolution de l'équilibre $\Rightarrow$ nouveaux prix $\Rightarrow$ nouveaux payoffs $\Rightarrow$ élagage du DAG.
+\end{enumerate}
+
+\textbf{(2) Le marchandage de Nash sur le contrat} On fixe $T_j$ par marchandage de Nash (fonction Cobb-Douglas): \footnote{Cette forme satisfait les quatre axiomes du marchandage de Nash (John Nash, (\url{https://fr.wikipedia.org/wiki/Jeu_de_marchandage_de_Nash#Solution_de_n\%C3\%A9gociation_Nash}) si $\gamma = 0.5$. On peut aussi envisager des pouvoirs de négociation différents, dans ce cas $\gamma \neq 0.5$ et on ne respecte plus l'axiome de symétrie.} 
+
+\[ 
+\max_{T_j}\ (A_j-T_j)^{\gamma}\,(T_j-R_j)^{1-\gamma}
+\quad\Longrightarrow\quad
+T_j^{\ast}=(1-\gamma)\,A_j+\gamma\,R_j,
+\]
+log-concave, maximum unique. Sous le paradigme des contrats, $A_j$ et $R_j$ se lisent \emph{entre les n\oe uds du DAG} :
+\begin{itemize}\itemsep1pt
+\item $R_j$ = le \textbf{prix de réserve} du pays $j$ : son payoff s'il \emph{reste} dans le cartel, lu sur l'équilibre du n\oe ud « $j$ cartelliste » ;
+\item $A_j$ = la \textbf{valeur du détachement pour la coalition} : $A_j = W_K(\text{$j$ partenaire}) - W_K(\text{$j$ cartelliste})$, où $W_K$ est le surplus actualisé de la coalition à l'équilibre du n\oe ud correspondant (récupération de rente de tarification carbone, sécurité d'approvisionnement, effet-prix de la dé-cartellisation).
+
+\end{itemize}
+
+Point clé, $R_j$ est endogène. Et la dynamique est une \textbf{cascade de dé-cartellisation}  : détacher un membre affaiblit le cartel $\Rightarrow$ le prix baisse $\Rightarrow$ la valeur de \emph{rester} cartelliste ($R_j$) baisse pour les membres restants $\Rightarrow$ les détacher devient \emph{moins cher}. (Sous le gel à la Harstad, c'était l'inverse : une escalade free-rider, offre $\downarrow$ $\Rightarrow$ prix $\uparrow$ $\Rightarrow$ $R_j$ $\uparrow$, la conservation devenait de plus en plus chère.) Auto-renforcement dans le sens de la dé-cartellisation! d'où le résultat visé : la menace crédible de contrats peut suffire à empêcher la cartellisation. Savoir si la cascade se déclenche, jusqu'où elle va, et sur quels pays l'amorcer (partenaires à co\^ut bas, moyen ou élevé ?) \textbf{c'est ce que le DAG résout}.
+
+\textbf{Quel critère de ciblage ?} Sous le gel, c'était « les gisements sales et pas chers ». Sous les contrats de consommation, c'est plutôt « le propre et pas cher » mais nuancé, le critère est plus riche : co\^ut du partenaire, sécurité d'approvisionnement, et surtout \emph{pouvoir de dé-cartellisation} (combien son départ affaiblit le cartel) ; la propreté ne joue plus qu'à travers le budget carbone (plus le pétrole acheté est propre, plus on peut en consommer par tonne de budget). L'empirique reste le m\^eme : Coulomb, et nous avec la base actualisée, trouvons une corrélation co\^ut--CarboneIntensity \emph{faible} ($0.04-0{,}07$ ; on retrouve $\approx 0{,}07$ avec la base actualisée sans NGL) et il existe de fortes hétérogénéités intra-nationales sur la propreté/ le co\^ut (Hétérogénéité des coûts d’extraction, thèse Léo) : la coalition a des marges de choix intéressantes dans le ciblage de ses contrats.
+
+
+
+
+\section{Premiers modèles ? (intègre le coefficient $\phi$ et ou $\theta$}
+
+\textbf{disclaimer}: écrit avant réunion, cette section ne présente pas l'idée, du point de vue d'un oligopole, de considérer les autres comme "membres de la frange". 
+Aussi, on peut très bien valider les modèles sur des variables simples et totalement arbitraires, et utiliser les données Rystad lorsque vient l'étape de production de résultats
+
+
+\textbf{Modèle 0 (sans coalition) : Nash-Cournot avec paramètre de collusion.} Un cartel homogène
+doté d'un paramètre de collusion $\theta\in[0,1]$, face à une frange agrégée price-taker. On résout
+un seul n\oe ud du DAG : un équilibre de Nash-Cournot, d'abord sur 1-2 périodes, puis sur $T$
+périodes (pour faire appara\^itre l'effet de séquence). On obtient prix, profits, quantités d'équilibre
+(et leurs trajectoires en multi-période). Codé en Julia / Gurobi, sur un sous-ensemble d'assets
+(p.\,ex.\ 10 OPEP + 10 frange) issus des données de Léo. En pratique j'ai utilisé des données fictives pour tester facilement les tout premiers modèles
+
+\textbf{Modèle 0$'$ (oligopole à $N$ joueurs, coopération $\varphi$).} M\^eme frange, mais $N$ gros joueurs individuels (co\^uts hétérogènes $c_i$), chacun sa FOC coopérative. \emph{Validations} : $\varphi=1$ redonne le Modèle 0 à $\theta=1$ (cartel pur) pour tout $N$ ; $\varphi=0$ redonne la conduite effective $\theta=1/N$ ; $N=1$ redonne le monopole pour tout $\varphi$. C'est la couche qu'exige le DAG (joueurs individuels) pour pouvoir détacher des membres (par contrat de la coalition)
+
+
+\textbf{Modèle 1}: oligopole-frange N+1 joueurs, T=2 périodes, premières conclusions: validations on retrouve modèles 0 et 0' lorsque r tend vers l'infini? et effets de séquences sur 2 périodes ? (violation règle de Herfindahl) 
+
+
+
+\textbf{Statut de $\theta$} Si nous avons micro-fondé $\theta$ via $\varphi$, la valeur numérique de cette coopération reste arbitraire. De Cannière reconnaît elle-même qu'aucune théorie n'en dérive la valeur (elle renvoie à Reiss \& Wolak). (Poser un $\varphi$ exogène ne fait que déplacer ce problème...) 
+
+\textit{Modèle 0} (bloc unique) : $\theta$ est posé mais il dérive conceptuellement de l'objectif coopératif décrit en partie 3. 
+
+\textit{Modèle 0$'$} ($N$ joueurs) : $\theta$ n'est plus posé, on utilise $\varphi$ et $N$, et on peut retomber sur le cartel parfait si $\varphi = 1$. 
+
+\textit{Modèle complet (DAG)} : le pouvoir de marché devient le résultat de la coalition qui tient debout, celle où aucun membre n'a intérêt à partir (contraintes de participation et marchandage, la logique d'Okullo \& Reynès portée au graphe). On ne supposerai plus la coopération, on la lirai sur l'équilibre.
+
+\textbf{Proposition de validation : reproduire De Cannière.} M\^eme cadre
+Nash-Cournot, m\^eme $\theta\in[0,1]$, données Rystad. Variables utilisées dans le papier (inputs) : 
+
+\begin{center}
+\begin{tabular}{lll}
+\hline
+Paramètre & Valeur & Unité \\
+\hline
+Choke price $\alpha$ & 225{,}5 & \$/bbl \\
+Pente demande inverse $\beta$ & 4{,}3 & \$/bbl \\
+Prix backstop $b$ & 102{,}5 & \$/bbl \\
+Co\^ut marginal cartel $k^c$ & 18 & \$/bbl \\
+Co\^ut marginal frange $k^f$ & 40 (bas) / 62{,}5 (haut) & \$/bbl \\
+Stock initial cartel $S^c_0$ & 1212 & milliards bbl \\
+Stock initial frange $S^f_0$ & 619{,}5 & milliards bbl \\
+Taux d'intérêt $r$ & 0{,}028 & --- \\
+Facteurs d'émission $\omega^c,\ \omega^f$ & 0{,}11083 ; 0{,}1525 & tC/bbl \\
+SCC & 250 & \$/tC \\
+\hline
+\end{tabular}
+\end{center}
+
+\textbf{Ce qu'on vise à répliquer pour valider :}
+\begin{itemize}\itemsep1pt
+\item \emph{Cas limites} : $\theta=0$ doit redonner l'issue parfaitement concurrentielle, $\theta=1$
+le monopole/cartel pur, sur le sous ensemble d'assets. Vérifiables \emph{analytiquement sur les cas minimaux} (tests unitaires : 1-2 champs, 1-2 périodes, formes closes), et par solution de référence indépendante (solve concurrentiel / monopole séparés) sur la calibration complète.
+\item \emph{Comparatif dynamique}: Sur l'ensemble des assets, viser la réplication des figures de De Cannière (figures 14 (a) et (b) trajectoires de prix et d'extraction) ou alors, puisque la base a légèrement changer, simplement comparer notre fit aux données réelles de la même manière. 
+\item \emph{Comparatif statique} : à $\theta$ croissant, prix initial \emph{plus haut} et quantité
+initiale du cartel \emph{plus basse} (le markup \emph{freine} la production).
+\item Si on souhaite estimer le coefficient $\theta$ : le $\hat\theta\approx 0{,}17$ (s.e.\ 0{,}005 ;  le cartel exerce $\approx 1/5$ de son pouvoir de marché potentiel. Voir estimation SMM et appendice D de De Cannière pour la boucle de convergence des prix. NB : le critère $|P^f-P^c|\le\varepsilon$ est un critère \emph{transitoire} de l'algorithme (à l'équilibre il n'y a qu'un seul prix de marché, les deux co\"incident) ; dans notre code on teste de façon équivalente la stabilité de $x^f$ d'une itération à l'autre.
+\item \emph{Élasticité de la demande} : Fixée à $\approx -0{,}16$ (pente $\hat\beta\approx-69{,}66$). Charlotte De Cannière l'estime économétriquement en amont par variables instrumentales. Même si la base Rystad a changé, les paramètres de la demande restent les mêmes, on peut utiliser ces valeurs comme input sans reproduire l'économétrie. 
+\item \emph{Séquences d'équilibre} : selon les stocks initiaux, Nash-Cournot donne $S\!\to\!L\!\to\!R$
+ou $S\!\to\!F\!\to\!R$: on doit retrouver les bonnes séquences à partir de nos stocks.
+\end{itemize}
+
+Rappel des régimes : 
+
+Régime S (Simultané) : $x^c_t > 0$ et $x^f_t > 0$.  
+
+Régime L (Leader seul) : $x^c_t > 0$ et $x^f_t = 0$.  
+
+Régime F (Frange seule) : $x^c_t = 0$ et $x^f_t > 0$. 
+
+Régime R (Ressource épuisée) : $x^c_t = 0$ et $x^f_t = 0$ (le prix atteint le niveau backstop $b$).
+
+\textbf{Une conclusion que lon peut rechercher :} le cartel avance-t-il dans le temps l'extraction du pétrole cher
+\emph{et} sale de la frange (effet de séquence) ? On décompose la perte de bien-\^etre vs l'optimum
+social en effet de \emph{conservation} et effet de \emph{séquence}, sur nos données (il devrait y avoir peu à faire pour cela une fois que l'on a le solver de l'équilibre de marché)
+
+
+
+
+\textbf{Modèle 2 (avec coalition).} On ajoute les contrats d'achat (Task 2.2). \textbf{Premières conclusions visées :}
+quels pays détacher en premier (co\^ut bas/moyen/élevé ?) ; la cascade de dé-cartellisation se déclenche-t-elle (et le DAG converge-t-il vers un marché quasi concurrentiel ?) ; co\^ut budgétaire des contrats par unité de rente carbone récupérée ; sensibilité à $\gamma$ ($\in\{0{,}2;0{,}5;0{,}8\}$). Je constaterai à ce moment là si la résolution devient inopérante à cause de la dimension, et basculerai sur les pistes suivantes:  
+
+\section{Pistes ML pour le closed-loop Stackelberg}
+
+
+
+\textbf{Pourquoi du ML} Naivement, le closed-loop souffre de la malédiction de la dimension : discrétiser
+les réserves de $\sim$10 agents en 10 points $=$ \textbf{$10^{10}$ états}, intenable. Si on suppose une frange agrégée et un cartel homogène, la structure oligopole-frange effondre le nombre d'état, mais le DAG exige de suivre individuellement les $N$ stocks des joueurs stratégiques (pour former/casser les coalitions et cibler les contrats). Le ML devient nécessaire car le nombre d'états demeure excessivement élevé si on souhaite modéliser quelque chose de concret et réaliste. 
+
+\subsection{ "Deep" Equilibrium Nets }
+\label{sec:A}
+\textbf{Comment le réseau pulvérise la dimension} Au lieu d'une table de $10^{10}$ cases, on approxime
+la fonction valeur (ou la politique) par un réseau $V(S;\phi)$ : l'état $S$ est l'input, la
+valeur est l'output, et $\dim(\phi)\approx 10^3$--$10^4$ poids suffisent. On ne stocke jamais
+$10^{10}$ cases : on entra\^ine sur des états échantillonnés (quelques milliers à millions de
+points tirés), et le réseau \emph{interpole} entre eux. Le co\^ut est en nombre de paramètres et
+d'échantillons, et non pas avec $\text{points}^{\dim}$. L'espace d'état est un hyper-rectangle continu $\mathcal{S}=[0,S_0^1] \times...\times [0,S_0^N]\times [0,S_0^f]\times [0,1]$ borné par les stocks initiaux\footnote{mais pas toujours une borne supérieure avec développement investissement et discoveries?} (avec $\tau = t/T, t \in [0,T]$ pour lisser l'espace discret $\{0,1,...T\}$) et on tire par échantillonnage (Monte Carlo) un subset d'états selon une distribution uniforme\footnote{pour forcer le réseau à minimiser ses résidus là où les équations de Bellman changent de régime (les kinks) on devrait utiliser une loi plus asymétrique?} sur cet espace.  
+
+\textbf{Architecture (un réseau par agent stratégique)} $\pi_i(S;\phi_i)$ pour chaque gros joueur $i=1..N$,
+$\pi_F(S;\phi_F)$ pour la frange agrégée. Forward pass, couche
+par couche : $z^{(l)}=W^{(l)}a^{(l-1)}+b^{(l)}$, $a^{(l)}=\sigma(z^{(l)})$. Input normalisé
+$S=(S^1/S^1_0,\dots,S^N/S^N_0,\ S^f/S^f_0,\ t/T)$. 2--3 couches cachées $\times$ 64 neurones ? pourrait suffire (donc pas vraiment des "Deep" Nets)
+
+\textbf{Activations : ReLU (max(0,x)), et ce n'est pas un choix arbitraire} ReLU est \emph{linéaire par morceaux}, donc
+elle approxime bien des fonctions constantes/affines par morceaux : c'est la forme
+des politiques d'extraction, qui ont de \textbf{vrais sauts} (généralement on arrête d'extraire d'un coup, ou on se met à extraire). Un réseau
+lisse raterait ces kinks ; ReLU les encaisse. En sortie, une activation softplus mise à
+l'échelle par les réserves restantes impose la contrainte physique $0\le x^i\le S^i$ 
+
+\textbf{Loss function ($N$ FOC stratégiques + 1 FOC de frange agrégée)}
+\[
+\mathcal{L}(\phi)=\mathbb{E}_{\mathcal{S}}\Big[\ \sum_{i=1}^{N}\big(\text{Résidu FOC}_{\,i}\big)^2\;+\;\big(\text{Résidu FOC}_{\text{frange agrégée}}\big)^2\ \Big]
+\]
+on minimise simultanément les résidus de toutes les FOC, pour aboutir à un équilibre. Une seule FOC de frange suffit dans le solve (price-taker $\Rightarrow$ son offre agrégée est une fonction du prix) ; la frange n'est \emph{désagrégée} qu'à la boucle externe (pruning du DAG et bilan welfare) gratuitement, la rente de chaque champ se lit au prix d'équilibre connu, $(p^*-c_i)x_i^*$. (mais les contrats de la coalition visent surtout des cartellistes à détacher.)
+
+\textbf{"Entraînement"}: On tire un subset faible\footnote{faible reporté au nombre total, mais ici il n'est pas vraiment question d'overfitting pour au moins deux raisons: espace continu non fini des stocks, et ce sont des PINNs, donc si on annule parfaitement la loss function, ce n'est pas du surraprentissage mais c'est qu'on a découvert la bonne solution} et aléatoire d'état (minibatch, pour la stochastic gradient descent; c'est l'intégration Monte Carlo de $\mathbb{E}_{\mathcal{S}}$), forward pass, calcul des résidus, backpropagation, gradient descent pour la mise à jour des poids $\phi$; on répète jusqu'à ce
+que les FOC tiennent $\approx$ partout. Post-entraînement, on obtient les trajectoires depuis $S_0$ avec une boucle déterministe : à chaque période $t$, les réseaux dictent les extractions $x^i_t = \pi_i(S_t)$, ce qui fixe le prix de marché $p_t = P(x^c_t + x^f_t)$, avant d'actualiser les stocks $S^i_{t+1} = S^i_t - x^i_t$ pour la période suivante.
+
+Et le terme de réaction $dx^f/d x^c$ s'obtient
+\textit{gratuitement} (en coût computationnel) par différentiation automatique à travers le réseau de la frange. Il est dans la FOC du cartel. 
+
+\textbf{Anticipés} : (i) pas de termes de réaction croisés en Nash-oligopole ($dx^j/dx^i$) (chacun prend les autres comme donnés), le DEQN reste simple ; en Stackelberg à plusieurs gros joueurs, il faudrait définir \emph{qui lead qui} (hiérarchie ambigu\"e), ; (ii) \emph{multiplicité d'équilibres} à $N>1$ ->la minimisation de résidus peut converger vers l'un d'eux, à garder en tête (initialisation depuis la solution exacte des petits cas, régularisation, moyenner des simulations) ; (iii) \emph{DAG discret $\leftrightarrow$ réseaux (continus)} c'est un jeu de réseaux par n\oe ud (peut être co\^uteux)?
+
+\subsection{ Reinforcement Learning sur multi-agents: une alternative écartée ? }
+\label{sec:B}
+
+Une approche alternative aux Deep Nets consisterait à modéliser le problème en apprentissage par renforcement ( RL). Chaque agent (Cartel, Frange) est doté d'un réseau politique maximisant sa récompense cumulée empirique. Pour respecter la structure \emph{Closed-Loop Stackelberg}, l'entraînement doit être imbriqué : la frange (follower) converge d'abord vers sa meilleure réponse, permettant au cartel (leader) d'estimer empiriquement le gradient de politique par la règle de la chaîne (il intègre alors la politique de la frange dans son programme) :
+\[
+\frac{\partial\Pi^c}{\partial x^c} + \frac{\partial\Pi^c}{\partial x^f} \cdot \frac{dx^f}{dx^c}
+\]
+
+\textbf{Problèmes que l'on peut anticiper:} cette piste est structurellement inadaptée et risque de ne pas aboutir, pour plusieurs raisons :
+\begin{enumerate}
+    \item \emph{Métastabilité :} Le RL explorerait l'espace des politiques en échantillonnant des trajectoires temporelles, mais l'espace est hautement non convexe avec toutes les contraintes des agents hétérogènes, et le risque de rejoindre des équilibres non Nash ou instables est très élevée. J'ai déjà expérimenté ce genre de problème de convergence vers des états métastables en physique, le seul moyen de s'en prémunir est de moyenner sur un grand nombre de trajectoires pour écarter les aberrations, c'est très coûteux et jamais 100\% fiable. Avec les Deep Nets, on échantillone pas de trajectoire: on approxime la fonction politique. 
+    \item \emph{Très cher computationnellement :} L'entraînement imbriqué demande la convergence totale du follower à chaque étape d'exploration du leader, et l'explosion combinatoire à cause des hétérogénéités reste un vrai problème, là où les réseaux (comme approximateurs universels) interpolent. 
+    \item \emph{Les "deep" nets ici sont physics-informed}:  Là où le RL doit apprendre laborieusement les lois économiques/physiques (programmes des profits, contraintes de stocks) en explorant beaucoup de trajectoires, les Deep Nets restreignent l'espace de recherche directement aux équations de Bellman et aux FOC en minimisant les résidus de celles-ci, et ils sont pénalisés si ils en dévie.
+\end{enumerate}
+\section{Etapes immédiates}
+
+BROUILLON : 
+
+\textbf{N'est pas assez discuté dans cette note}: les stranded assets, et la stratégie d'offre de contrats par la coalition; le budget carbone de la coalition et son programme de maximisation du surplus coalition + ex cartelliste, et Okullo n'utilise pas telle quelle l'idée de Cyert (coefficient de coopération) mais le dérive plutôt d'un Nash bargaining au sein du cartel (et abouti à une vision tout à fait analogue) 
+
+Ecrire les différentes contraintes (de stock, de capacité) avec les équations de Bellman
+Hypothèse des stocks en $T$?
+Relancer pour différentes valeurs $S_T$ jusqu'à convergence de l'état $T$?
+
+Methode SMM De Cannière ? data leakage? 
+
+Nécessité du ML et grille DP
+
+généraliser réseaux à tout le DAG ; joueurs "nuls" ? 
+
+coefficient de contrainte; prendre backstop + capacité de production + stock non négatif au lieu de "tout écouler" ? 
+
+1 fonction d'offre par pays ; et ensuite raffiner assets 
+
+comment le réseau gère la symétrie : a priori OK si les fonctions d'activations sont symétriques 
+
+\newpage
+\section{Analyse de données sur 15 pays producteurs }
+
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1.0\textwidth]{ci_par_pays.png} % Remplacer par le chemin exact
+    \caption{Intensité carbone combinée par pays producteur (gCO$_2$e/MJ). Réplication actualisée de Coulomb et al (\textbf{fait par Léo?})., Fig. 1(b). $gCO_{2}e/MJ$ pour la Figure 1, $kgCO_{2}e/bbl$ pour la suivante (comme chez Coulomb) }
+    \label{fig:ci_by_country}
+\end{figure}
+
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.90\textwidth]{corr.png} % Remplacer par le chemin exact
+    \caption{Coût d'extraction privé vs Intensité carbone. Réplication actualisée de Coulomb et al. (fait par Léo?), Fig. 2. La corrélation faible et les fortes hétérogénéités intra-nationales donnent à la coalition de vraies marges de choix dans le ciblage de ses contrats (coût, propreté via le budget carbone, pouvoir de dé-cartellisation) }
+    \label{fig:ci_vs_cost}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\caption{Top 15 des parts de production mondiale (1992--2018) en \% production globale}
+\label{tab:prod_shares}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Pays} & \textbf{Données actualisées (\%)} & \textbf{Coulomb et al. (\%)} \\
+\midrule
+Saudi Arabia & 12{,}7 & 14{,}0 \\
+Russia & 12{,}2 & 12{,}0 \\
+United States & 9{,}2 & 10{,}0 \\
+Iran & 5{,}3 & 5{,}0 \\
+China & 4{,}9 & 5{,}0 \\
+Venezuela & 4{,}0 & 4{,}0 \\
+Mexico & 3{,}9 & 4{,}0 \\
+UAE & 3{,}7 & 4{,}0 \\
+Norway & 3{,}3 & 3{,}0 \\
+Iraq & 3{,}2 & 3{,}0 \\
+Kuwait & 3{,}2 & 3{,}0 \\
+Nigeria & 3{,}1 & 3{,}0 \\
+Canada & 2{,}8 & 4{,}0 \\
+United Kingdom & 2{,}3 & 2{,}0 \\
+Brazil & 2{,}2 & 2{,}0 \\
+\bottomrule \\ \\ 
+
+\multicolumn{3}{l}{\small \textbf{Méthode :} $S_i = \frac{\sum_{t=1992}^{2018} q_{i,t}}{\sum_{t=1992}^{2018} Q_t}$.} \\ \\
+
+\multicolumn{3}{l}{\small \textbf{Différence :} Écart moyen = 7{,}9\,\%.} \\
+\end{tabular}
+\end{table}
+
+
+\begin{table}[htbp]
+\centering
+\caption{Comparaison \textbf{\textit{statique}} des volumes récupérables (en Gb, 2019). Les 15 pays sont \emph{ceux de la liste de Coulomb et al.} (comparaison directe).}
+\label{tab:resources_comparison}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Pays} & \textbf{Resources (statique)} & \textbf{Reserves 1P} & \textbf{Reserves 2P} & \textbf{Coulomb (Resources)} \\
+\midrule
+Saudi Arabia & 245{,}0 & 56{,}0 & 90{,}0 & 286{,}0 \\
+Russia & 141{,}0 & 49{,}0 & 76{,}0 & 143{,}0 \\
+United States & 124{,}0 & 44{,}0 & 59{,}0 & 190{,}0 \\
+Iran & 91{,}0 & 16{,}0 & 30{,}0 & 90{,}0 \\
+China & 63{,}0 & 18{,}0 & 36{,}0 & 46{,}0 \\
+Mexico & 19{,}0 & 5{,}0 & 10{,}0 & 25{,}0 \\
+UAE & 76{,}0 & 18{,}0 & 32{,}0 & 72{,}0 \\
+Canada & 69{,}0 & 25{,}0 & 41{,}0 & 101{,}0 \\
+Venezuela & 13{,}0 & 3{,}0 & 5{,}0 & 34{,}0 \\
+Iraq & 109{,}0 & 20{,}0 & 46{,}0 & 122{,}0 \\
+Norway & 16{,}0 & 5{,}0 & 10{,}0 & 21{,}0 \\
+Kuwait & 50{,}0 & 13{,}0 & 21{,}0 & 61{,}0 \\
+Nigeria & 16{,}0 & 6{,}0 & 10{,}0 & 26{,}0 \\
+United Kingdom & 8{,}0 & 2{,}0 & 4{,}0 & 13{,}0 \\
+Brazil & 53{,}0 & 10{,}0 & 29{,}0 & 62{,}0 \\
+\bottomrule
+\multicolumn{5}{p{15cm}}{\small \emph{Resources (statique)} $=$ somme de la colonne Rystad \texttt{Resources} au stock 2019 (volumes économiquement récupérables). Total monde : 1406{,}0 Gb (contre $\approx$ 1518 Gb pour Coulomb et al., millésime 2019 de la base).} \\
+\end{tabular}
+\end{table}
+
+
+\begin{table}[htbp]
+\centering
+\caption{Détail des réserves et capacités (en Gb), \textit{\textbf{modélisation dynamique} (intégrale production future 2019-2100)}. Les 15 pays sont ici \emph{notre} top 15 \emph{classé par Reserves BAU} --- d'où un ensemble différent de la table précédente (le Venezuela, gros en stock statique mais faible en flux BAU, en sort ; Kazakhstan, Qatar, Argentine y entrent).}
+\label{tab:detailed_reserves}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Pays} & \textbf{1P} & \textbf{2P} & \textbf{Ressources Tech.$^\dagger$} & \textbf{Reserves BAU} & \textbf{Capacité$^\ddagger$} \\
+\midrule
+Saudi Arabia & 55{,}5 & 89{,}7 & 289{,}9 & 225{,}0 & 9{,}3 \\
+United States & 44{,}4 & 58{,}7 & 187{,}6 & 161{,}2 & 17{,}8 \\
+Russia & 49{,}2 & 75{,}5 & 182{,}8 & 136{,}9 & 14{,}6 \\
+Iraq & 19{,}9 & 46{,}1 & 119{,}2 & 105{,}5 & 6{,}0 \\
+Iran & 16{,}5 & 30{,}0 & 113{,}0 & 84{,}1 & 6{,}2 \\
+UAE & 18{,}3 & 31{,}7 & 93{,}5 & 72{,}8 & 3{,}1 \\
+Canada & 24{,}5 & 41{,}3 & 141{,}1 & 67{,}0 & 4{,}2 \\
+China & 18{,}4 & 35{,}9 & 69{,}1 & 59{,}1 & 5{,}0 \\
+Kuwait & 12{,}7 & 20{,}8 & 57{,}1 & 50{,}4 & 2{,}6 \\
+Brazil & 10{,}4 & 29{,}4 & 73{,}9 & 50{,}2 & 5{,}9 \\
+Kazakhstan & 14{,}5 & 18{,}5 & 40{,}6 & 30{,}3 & 1{,}8 \\
+Qatar & 8{,}6 & 15{,}2 & 46{,}7 & 27{,}7 & 1{,}4 \\
+Argentina & 3{,}8 & 5{,}1 & 32{,}5 & 24{,}4 & 1{,}6 \\
+Mexico & 4{,}9 & 10{,}0 & 40{,}0 & 19{,}0 & 4{,}5 \\
+Norway & 5{,}4 & 10{,}2 & 23{,}2 & 16{,}5 & 4{,}2 \\
+\bottomrule
+\multicolumn{6}{p{14cm}}{\small Total monde Reserves BAU : 1376{,}38 Gb. Avec le total statique (1406 Gb, table précédente), les deux méthodes \emph{encadrent} l'ordre de grandeur de Coulomb (1518 Gb) ; l'écart statique/BAU mesure notamment les volumes non extraits avant 2100.} \\
+\multicolumn{6}{p{14cm}}{\small $^\dagger$ La base n'exportant pas l'agrégat strict "3P", la variable \emph{Technical recoverable resources} agit comme proxy de la borne supérieure absolue des volumes récupérables.} \\
+\multicolumn{6}{p{14cm}}{\small $^\ddagger$ La capacité est modélisée comme la somme des pics de production historiques des gisements du pays.} \\
+\end{tabular}
+\end{table}
+
+
+\end{document}
